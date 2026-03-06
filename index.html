@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Recorder</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a3a;
+    --accent: #6c63ff;
+    --green: #00e5a0;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --danger: #ff4757;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 10% 20%, rgba(108,99,255,0.08) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 90% 80%, rgba(0,229,160,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeDown 0.5s ease both;
+  }
+
+  .logo-tag {
+    display: inline-block;
+    background: rgba(108,99,255,0.15);
+    border: 1px solid rgba(108,99,255,0.3);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.6) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  header p { color: var(--muted); font-size: 15px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .card-title { font-size: 17px; font-weight: 700; }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .row2 { grid-template-columns: 1fr; } }
+
+  /* Record zone */
+  .record-zone {
+    background: var(--surface2);
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 32px 20px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+
+  .record-zone.active {
+    border-color: var(--danger);
+    border-style: solid;
+    background: rgba(255,71,87,0.04);
+    box-shadow: 0 0 40px rgba(255,71,87,0.06);
+  }
+
+  .record-zone.done {
+    border-color: var(--green);
+    border-style: solid;
+    background: rgba(0,229,160,0.04);
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.7); opacity: 0; }
+  }
+
+  .mic-btn {
+    width: 76px; height: 76px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    transition: all 0.25s;
+    position: relative;
+    font-size: 26px;
+  }
+
+  .mic-btn:hover { transform: scale(1.06); }
+
+  .mic-btn.recording { background: var(--danger); }
+  .mic-btn.recording::before {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 2px solid var(--danger);
+    animation: pulse-ring 1.4s ease infinite;
+  }
+  .mic-btn.recording::after {
+    content: '';
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,71,87,0.35);
+    animation: pulse-ring 1.4s ease 0.5s infinite;
+  }
+
+  .mic-btn.done { background: var(--green); }
+
+  .record-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .record-status {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .record-status.live { color: var(--danger); font-weight: 700; }
+  .record-status.done-status { color: var(--green); font-weight: 700; }
+
+  .waveform {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 36px;
+    margin-bottom: 18px;
+  }
+
+  .wave-bar {
+    width: 3px;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: height 0.1s;
+  }
+
+  .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: rgba(255,71,87,0.12);
+    color: var(--danger);
+    border: 1px solid rgba(255,71,87,0.25);
+  }
+  .btn-danger:hover { background: rgba(255,71,87,0.22); }
+
+  .btn-green {
+    background: rgba(0,229,160,0.12);
+    color: var(--green);
+    border: 1px solid rgba(0,229,160,0.25);
+  }
+  .btn-green:hover { background: rgba(0,229,160,0.22); }
+
+  /* Transcript */
+  .transcript-wrap {
+    margin-top: 20px;
+    display: none;
+  }
+
+  .transcript-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .char-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  #transcript-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 180px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .interim { color: var(--muted); font-style: italic; }
+
+  /* Copy button big */
+  .copy-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 13px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), #8b84ff);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    margin-top: 14px;
+    box-shadow: 0 4px 20px rgba(108,99,255,0.25);
+  }
+
+  .copy-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(108,99,255,0.38); }
+  .copy-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  /* Hint */
+  .hint-box {
+    background: rgba(108,99,255,0.07);
+    border: 1px solid rgba(108,99,255,0.18);
+    border-radius: 13px;
+    padding: 16px 18px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .hint-box strong { color: var(--text); }
+
+  /* Notification */
+  .notif {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--green);
+    color: var(--green);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    display: none;
+    z-index: 100;
+    animation: fadeUp 0.3s ease;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  }
+  .notif.show { display: block; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Lang selector */
+  .lang-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .lang-pill {
+    padding: 5px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .lang-pill.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(108,99,255,0.1);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="logo-tag">Interview Recorder</div>
+    <h1>Запись интервью</h1>
+    <p>Нажми на микрофон — говори — скопируй транскрипт</p>
+  </header>
+
+  <!-- Context -->
+  <div class="card" style="animation-delay:0.05s">
+    <div class="card-header">
+      <div class="card-title">📋 Контекст</div>
+    </div>
+    <div class="row2">
+      <div>
+        <div class="field-label">Позиция</div>
+        <input type="text" id="role" placeholder="Senior Designer" />
+      </div>
+      <div>
+        <div class="field-label">Кандидат</div>
+        <input type="text" id="candidate" placeholder="Имя Фамилия" />
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="field-label">Язык записи</div>
+      <div class="lang-pills">
+        <div class="lang-pill active" onclick="setLang('ru-RU', this)">🇷🇺 Русский</div>
+        <div class="lang-pill" onclick="setLang('en-US', this)">🇺🇸 English</div>
+        <div class="lang-pill" onclick="setLang('he-IL', this)">🇮🇱 עברית</div>
+        <div class="lang-pill" onclick="setLang('de-DE', this)">🇩🇪 Deutsch</div>
+        <div class="lang-pill" onclick="setLang('fr-FR', this)">🇫🇷 Français</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recorder -->
+  <div class="card" style="animation-delay:0.1s">
+    <div class="record-zone" id="record-zone">
+
+      <div class="waveform" id="waveform">
+        <div class="wave-bar" style="height:5px"></div>
+        <div class="wave-bar" style="height:9px"></div>
+        <div class="wave-bar" style="height:5px"></div>
+        <div class="wave-bar" style="height:14px"></div>
+        <div class="wave-bar" style="height:7px"></div>
+        <div class="wave-bar" style="height:20px"></div>
+        <div class="wave-bar" style="height:9px"></div>
+        <div class="wave-bar" style="height:5px"></div>
+        <div class="wave-bar" style="height:12px"></div>
+        <div class="wave-bar" style="height:7px"></div>
+        <div class="wave-bar" style="height:16px"></div>
+        <div class="wave-bar" style="height:5px"></div>
+      </div>
+
+      <button class="mic-btn" id="mic-btn" onclick="toggleRecording()">🎙</button>
+
+      <div class="record-time" id="record-time">00:00</div>
+      <div class="record-status" id="record-status">Нажми для начала записи</div>
+
+      <div class="btn-row" id="controls" style="display:none;">
+        <button class="btn btn-ghost" id="pause-btn" onclick="togglePause()">⏸ Пауза</button>
+        <button class="btn btn-danger" onclick="stopRecording()">⏹ Завершить</button>
+      </div>
+    </div>
+
+    <!-- Transcript -->
+    <div class="transcript-wrap" id="transcript-wrap">
+      <div class="transcript-toolbar">
+        <div class="field-label" style="margin:0;">Транскрипт</div>
+        <div class="char-count" id="char-count">0 слов</div>
+      </div>
+      <div id="transcript-box">
+        <span id="final-text"></span><span class="interim" id="interim-text"></span>
+      </div>
+
+      <button class="copy-btn" id="copy-btn" onclick="copyTranscript()" disabled>
+        📋 Скопировать транскрипт для анализа
+      </button>
+
+      <div style="margin-top: 10px; display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="clearAll()">🗑 Очистить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hint -->
+  <div class="card hint-box" style="animation-delay:0.15s; border-radius:14px;">
+    💡 <strong>Как использовать:</strong> Запиши интервью → скопируй транскрипт → вставь в Claude.ai и напиши позицию и что важно проверить → получи анализ.
+  </div>
+
+</div>
+
+<div class="notif" id="notif">✓ Скопировано!</div>
+
+<script>
+let recognition = null;
+let isRecording = false;
+let isPaused = false;
+let seconds = 0;
+let timerInterval = null;
+let waveInterval = null;
+let finalText = '';
+let currentLang = 'ru-RU';
+
+function setLang(lang, el) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleRecording() {
+  if (!isRecording) startRecording();
+  else stopRecording();
+}
+
+function startRecording() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert('Браузер не поддерживает запись. Открой в Chrome!');
+    return;
+  }
+
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = currentLang;
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalText += e.results[i].transcript + ' ';
+      else interim = e.results[i].transcript;
+    }
+    document.getElementById('final-text').textContent = finalText;
+    document.getElementById('interim-text').textContent = interim;
+    updateWordCount();
+
+    // Auto scroll
+    const box = document.getElementById('transcript-box');
+    box.scrollTop = box.scrollHeight;
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'not-allowed') {
+      alert('Нет доступа к микрофону. Разреши в настройках браузера.');
+      stopRecording();
+    }
+  };
+
+  recognition.onend = () => {
+    if (isRecording && !isPaused) recognition.start();
+  };
+
+  recognition.start();
+  isRecording = true;
+
+  // UI
+  document.getElementById('mic-btn').classList.add('recording');
+  document.getElementById('mic-btn').textContent = '⏹';
+  document.getElementById('record-zone').classList.add('active');
+  document.getElementById('record-status').textContent = '● Идёт запись...';
+  document.getElementById('record-status').classList.add('live');
+  document.getElementById('controls').style.display = 'flex';
+  document.getElementById('transcript-wrap').style.display = 'block';
+
+  startTimer();
+  startWave();
+}
+
+function stopRecording() {
+  if (recognition) { recognition.stop(); recognition = null; }
+  isRecording = false;
+  isPaused = false;
+
+  document.getElementById('mic-btn').classList.remove('recording');
+  document.getElementById('mic-btn').classList.add('done');
+  document.getElementById('mic-btn').textContent = '✓';
+  document.getElementById('record-zone').classList.remove('active');
+  document.getElementById('record-zone').classList.add('done');
+  document.getElementById('record-status').textContent = '✓ Запись завершена';
+  document.getElementById('record-status').classList.remove('live');
+  document.getElementById('record-status').classList.add('done-status');
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('interim-text').textContent = '';
+
+  if (finalText.trim()) {
+    document.getElementById('copy-btn').disabled = false;
+  }
+
+  stopTimer();
+  stopWave();
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('pause-btn');
+  if (isPaused) {
+    recognition.stop();
+    btn.textContent = '▶ Продолжить';
+    stopTimer();
+    stopWave();
+    document.getElementById('record-status').textContent = '⏸ Пауза';
+    document.getElementById('record-status').classList.remove('live');
+  } else {
+    recognition.start();
+    btn.textContent = '⏸ Пауза';
+    startTimer();
+    startWave();
+    document.getElementById('record-status').textContent = '● Идёт запись...';
+    document.getElementById('record-status').classList.add('live');
+  }
+}
+
+function updateWordCount() {
+  const words = finalText.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('char-count').textContent = words + ' слов';
+}
+
+function copyTranscript() {
+  const role = document.getElementById('role').value.trim();
+  const candidate = document.getElementById('candidate').value.trim();
+  const m = Math.floor(seconds/60), s = String(seconds%60).padStart(2,'0');
+
+  let header = '';
+  if (role || candidate) {
+    header = `Позиция: ${role || '—'}\nКандидат: ${candidate || '—'}\nДлительность: ${m}:${s}\n\n--- ТРАНСКРИПТ ---\n\n`;
+  }
+
+  navigator.clipboard.writeText(header + finalText.trim()).then(() => {
+    const n = document.getElementById('notif');
+    n.classList.add('show');
+    setTimeout(() => n.classList.remove('show'), 2500);
+  });
+}
+
+function clearAll() {
+  if (!confirm('Очистить транскрипт?')) return;
+  finalText = '';
+  seconds = 0;
+  document.getElementById('final-text').textContent = '';
+  document.getElementById('interim-text').textContent = '';
+  document.getElementById('record-time').textContent = '00:00';
+  document.getElementById('record-status').textContent = 'Нажми для начала записи';
+  document.getElementById('record-status').className = 'record-status';
+  document.getElementById('mic-btn').className = 'mic-btn';
+  document.getElementById('mic-btn').textContent = '🎙';
+  document.getElementById('record-zone').className = 'record-zone';
+  document.getElementById('transcript-wrap').style.display = 'none';
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('copy-btn').disabled = true;
+  document.getElementById('char-count').textContent = '0 слов';
+  isRecording = false;
+  isPaused = false;
+}
+
+// Timer
+function startTimer() {
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds/60)).padStart(2,'0');
+    const s = String(seconds%60).padStart(2,'0');
+    document.getElementById('record-time').textContent = `${m}:${s}`;
+  }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); }
+
+// Waveform
+function startWave() {
+  const bars = document.querySelectorAll('.wave-bar');
+  waveInterval = setInterval(() => {
+    bars.forEach(b => b.style.height = (3 + Math.random() * 26) + 'px');
+  }, 110);
+}
+function stopWave() {
+  clearInterval(waveInterval);
+  const heights = [5,9,5,14,7,20,9,5,12,7,16,5];
+  document.querySelectorAll('.wave-bar').forEach((b,i) => b.style.height = heights[i] + 'px');
+}
+</script>
+</body>
+</html>
