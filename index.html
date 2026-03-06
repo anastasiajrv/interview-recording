@@ -511,8 +511,10 @@ function startRecording() {
   recognition.onresult = (e) => {
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) finalText += e.results[i].transcript + ' ';
-      else interim = e.results[i].transcript;
+      const result = e.results[i];
+      const transcript = (result[0] && result[0].transcript) ? result[0].transcript : '';
+      if (result.isFinal) finalText += transcript + ' ';
+      else interim = transcript;
     }
     document.getElementById('final-text').textContent = finalText;
     document.getElementById('interim-text').textContent = interim;
