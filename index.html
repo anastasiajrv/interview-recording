@@ -483,6 +483,7 @@ let seconds = 0;
 let timerInterval = null;
 let waveInterval = null;
 let finalText = '';
+let sessionText = ''; // persists across recognition restarts
 let currentLang = 'ru-RU';
 
 function setLang(lang, el) {
@@ -510,12 +511,17 @@ function startRecording() {
 
   recognition.onresult = (e) => {
     let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
+    let newFinal = sessionText;
+    for (let i = 0; i < e.results.length; i++) {
       const result = e.results[i];
       const transcript = (result[0] && result[0].transcript) ? result[0].transcript : '';
-      if (result.isFinal) finalText += transcript + ' ';
-      else interim = transcript;
+      if (result.isFinal) {
+        if (i >= e.resultIndex) newFinal += transcript + ' ';
+      } else {
+        interim = transcript;
+      }
     }
+    finalText = newFinal;
     document.getElementById('final-text').textContent = finalText;
     document.getElementById('interim-text').textContent = interim;
     updateWordCount();
@@ -533,7 +539,10 @@ function startRecording() {
   };
 
   recognition.onend = () => {
-    if (isRecording && !isPaused) recognition.start();
+    if (isRecording && !isPaused) {
+      sessionText = finalText;
+      recognition.start();
+    }
   };
 
   recognition.start();
@@ -608,19 +617,34 @@ function copyTranscript() {
 
   let header = '';
   if (role || candidate) {
-    header = `Позиция: ${role || '—'}\nКандидат: ${candidate || '—'}\nДлительность: ${m}:${s}\n\n--- ТРАНСКРИПТ ---\n\n`;
+    header = 'Позиция: ' + (role || '—') + '\nКандидат: ' + (candidate || '—') + '\nДлительность: ' + m + ':' + s + '\n\n--- ТРАНСКРИПТ ---\n\n';
   }
 
-  navigator.clipboard.writeText(header + finalText.trim()).then(() => {
+  const fullText = header + finalText.trim();
+
+  // Fallback copy method that works everywhere
+  const ta = document.createElement('textarea');
+  ta.value = fullText;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
     const n = document.getElementById('notif');
     n.classList.add('show');
     setTimeout(() => n.classList.remove('show'), 2500);
-  });
+  } catch(e) {
+    alert('Не удалось скопировать. Выдели текст вручную и нажми Ctrl+C');
+  }
+  document.body.removeChild(ta);
 }
 
 function clearAll() {
   if (!confirm('Очистить транскрипт?')) return;
-  finalText = '';
+  finalText = ''; sessionText = '';
   seconds = 0;
   document.getElementById('final-text').textContent = '';
   document.getElementById('interim-text').textContent = '';
